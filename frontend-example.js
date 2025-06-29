@@ -1,6 +1,6 @@
 /**
  * Frontend Example - Vanilla JavaScript
- * Implementacja autoryzacji Swayfy po stronie klienta
+ * Swayfy authorization implementation for client-side
  */
 
 class SwayfyAuth {
@@ -20,23 +20,23 @@ class SwayfyAuth {
     }
 
     init() {
-        // Sprawdź czy jesteśmy na stronie callback
+        // Check if we're on the callback page
         if (window.location.pathname === '/auth/callback') {
             this.handleCallback();
         }
         
-        // Sprawdź czy użytkownik jest zalogowany
+        // Check if user is logged in
         if (this.token && this.accountId) {
             this.verifyToken();
         }
     }
 
     /**
-     * Generuje link logowania i przekierowuje użytkownika
+     * Generates login link and redirects user
      */
     async login() {
         try {
-            this.showLoading('Generowanie linku logowania...');
+            this.showLoading('Generating login link...');
             
             const response = await fetch(`${this.config.apiUrl}/api/auth/generate`, {
                 method: 'POST',
@@ -53,20 +53,20 @@ class SwayfyAuth {
             const data = await response.json();
             
             if (data.success) {
-                // Przekieruj do Swayfy
+                // Redirect to Swayfy
                 window.location.href = data.url;
             } else {
-                throw new Error('Nie udało się wygenerować linku logowania');
+                throw new Error('Failed to generate login link');
             }
         } catch (error) {
-            this.showError('Błąd logowania: ' + error.message);
+            this.showError('Login error: ' + error.message);
         } finally {
             this.hideLoading();
         }
     }
 
     /**
-     * Obsługuje callback po powrocie z Swayfy
+     * Handles callback after returning from Swayfy
      */
     async handleCallback() {
         const urlParams = new URLSearchParams(window.location.search);
@@ -76,11 +76,11 @@ class SwayfyAuth {
 
         if (code && accountId && confirm === this.config.confirmationToken) {
             try {
-                this.showLoading('Finalizowanie logowania...');
+                this.showLoading('Finalizing login...');
                 
                 const tokenData = await this.exchangeToken(code, accountId);
                 
-                // Zapisz dane użytkownika
+                // Store user data
                 this.token = tokenData.token;
                 this.accountId = tokenData.user.accountId;
                 this.username = tokenData.user.username;
@@ -89,24 +89,24 @@ class SwayfyAuth {
                 localStorage.setItem('swayfy_account_id', this.accountId);
                 localStorage.setItem('swayfy_username', this.username);
                 
-                // Wyczyść URL i przekieruj
+                // Clear URL and redirect
                 window.history.replaceState({}, document.title, '/dashboard');
                 this.onLoginSuccess(tokenData.user);
                 
             } catch (error) {
-                this.showError('Błąd podczas finalizacji logowania: ' + error.message);
+                this.showError('Error finalizing login: ' + error.message);
                 window.history.replaceState({}, document.title, '/login');
             } finally {
                 this.hideLoading();
             }
         } else {
-            this.showError('Nieprawidłowe parametry autoryzacji');
+            this.showError('Invalid authorization parameters');
             window.history.replaceState({}, document.title, '/login');
         }
     }
 
     /**
-     * Wymienia kod autoryzacyjny na token dostępu
+     * Exchanges authorization code for access token
      */
     async exchangeToken(code, accountId) {
         const response = await fetch(`${this.config.apiUrl}/api/exchangeToken`, {
@@ -125,12 +125,12 @@ class SwayfyAuth {
         if (data.success) {
             return data;
         } else {
-            throw new Error(data.message || 'Wymiana tokena nie powiodła się');
+            throw new Error(data.message || 'Token exchange failed');
         }
     }
 
     /**
-     * Weryfikuje ważność tokena
+     * Verifies token validity
      */
     async verifyToken() {
         if (!this.token || !this.accountId) {
@@ -160,14 +160,14 @@ class SwayfyAuth {
                 return false;
             }
         } catch (error) {
-            console.error('Błąd weryfikacji tokena:', error);
+            console.error('Token verification error:', error);
             this.logout();
             return false;
         }
     }
 
     /**
-     * Wylogowuje użytkownika
+     * Logs out the user
      */
     logout() {
         this.token = null;
@@ -182,14 +182,14 @@ class SwayfyAuth {
     }
 
     /**
-     * Sprawdza czy użytkownik jest zalogowany
+     * Checks if user is authenticated
      */
     isAuthenticated() {
         return !!(this.token && this.accountId);
     }
 
     /**
-     * Pobiera dane użytkownika
+     * Gets user data
      */
     getUser() {
         return {
@@ -200,11 +200,11 @@ class SwayfyAuth {
     }
 
     /**
-     * Wykonuje autoryzowane żądanie do API
+     * Makes authenticated request to API
      */
     async authenticatedRequest(url, options = {}) {
         if (!this.isAuthenticated()) {
-            throw new Error('Użytkownik nie jest zalogowany');
+            throw new Error('User is not authenticated');
         }
 
         const headers = {
@@ -220,38 +220,38 @@ class SwayfyAuth {
         });
 
         if (response.status === 401) {
-            // Token wygasł
+            // Token expired
             this.logout();
-            throw new Error('Sesja wygasła');
+            throw new Error('Session expired');
         }
 
         return response;
     }
 
-    // Metody UI (do nadpisania)
+    // UI methods (to be overridden)
     showLoading(message) {
         console.log('Loading:', message);
-        // Implementuj własny loader
+        // Implement your own loader
     }
 
     hideLoading() {
         console.log('Loading finished');
-        // Ukryj loader
+        // Hide loader
     }
 
     showError(message) {
         console.error('Error:', message);
-        alert(message); // Zastąp własnym systemem powiadomień
+        alert(message); // Replace with your own notification system
     }
 
     onLoginSuccess(user) {
         console.log('Login successful:', user);
-        // Implementuj logikę po udanym logowaniu
+        // Implement logic after successful login
     }
 
     onTokenValid() {
         console.log('Token is valid');
-        // Implementuj logikę gdy token jest ważny
+        // Implement logic when token is valid
     }
 
     onLogout() {
@@ -260,10 +260,10 @@ class SwayfyAuth {
     }
 }
 
-// Przykład użycia
+// Usage example
 const auth = new SwayfyAuth({
     confirmationToken: 'my_unique_app_token',
-    redirectUrl: 'https://moja-aplikacja.com/auth/callback'
+    redirectUrl: 'https://my-app.com/auth/callback'
 });
 
 // Event listeners
@@ -279,12 +279,12 @@ document.addEventListener('DOMContentLoaded', () => {
         logoutBtn.addEventListener('click', () => auth.logout());
     }
     
-    // Sprawdź status autoryzacji przy ładowaniu strony
+    // Check auth status on page load
     if (auth.isAuthenticated()) {
-        // Pokaż interfejs zalogowanego użytkownika
+        // Show authenticated user interface
         showAuthenticatedUI(auth.getUser());
     } else {
-        // Pokaż formularz logowania
+        // Show login form
         showLoginUI();
     }
 });
@@ -300,13 +300,13 @@ function showLoginUI() {
     document.getElementById('dashboardSection').style.display = 'none';
 }
 
-// Przykład autoryzowanego żądania
+// Example authenticated request
 async function fetchUserData() {
     try {
         const response = await auth.authenticatedRequest('/api/user/profile');
         const userData = await response.json();
         console.log('User data:', userData);
     } catch (error) {
-        console.error('Błąd pobierania danych:', error);
+        console.error('Error fetching data:', error);
     }
 }
