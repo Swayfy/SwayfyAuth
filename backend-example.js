@@ -1,13 +1,13 @@
 /**
  * Backend Example - Node.js/Express
- * Implementacja autoryzacji Swayfy po stronie serwera
+ * Swayfy authorization implementation for server-side
  */
 
 const express = require('express');
 const cors = require('cors');
 const app = express();
 
-// Konfiguracja
+// Configuration
 const config = {
     swayfy: {
         apiUrl: 'https://swayfy.xyz',
@@ -24,7 +24,7 @@ app.use(cors());
 app.use(express.json());
 
 /**
- * Klasa do zarządzania autoryzacją Swayfy
+ * Class for managing Swayfy authorization
  */
 class SwayfyAuthManager {
     constructor(config) {
@@ -32,7 +32,7 @@ class SwayfyAuthManager {
     }
 
     /**
-     * Generuje link autoryzacyjny
+     * Generates authorization link
      */
     async generateAuthLink() {
         try {
@@ -53,16 +53,16 @@ class SwayfyAuthManager {
             if (data.success) {
                 return data.url;
             } else {
-                throw new Error('Nie udało się wygenerować linku autoryzacyjnego');
+                throw new Error('Failed to generate authorization link');
             }
         } catch (error) {
-            console.error('Błąd generowania linku:', error);
+            console.error('Link generation error:', error);
             throw error;
         }
     }
 
     /**
-     * Wymienia kod autoryzacyjny na token dostępu
+     * Exchanges authorization code for access token
      */
     async exchangeCodeForToken(code, accountId) {
         try {
@@ -85,16 +85,16 @@ class SwayfyAuthManager {
                     user: data.user
                 };
             } else {
-                throw new Error(data.message || 'Wymiana tokena nie powiodła się');
+                throw new Error(data.message || 'Token exchange failed');
             }
         } catch (error) {
-            console.error('Błąd wymiany tokena:', error);
+            console.error('Token exchange error:', error);
             throw error;
         }
     }
 
     /**
-     * Weryfikuje ważność tokena
+     * Verifies token validity
      */
     async verifyToken(token, accountId) {
         try {
@@ -112,24 +112,24 @@ class SwayfyAuthManager {
             const data = await response.json();
             return data.success && data.valid;
         } catch (error) {
-            console.error('Błąd weryfikacji tokena:', error);
+            console.error('Token verification error:', error);
             return false;
         }
     }
 
     /**
-     * Sprawdza czy użytkownik ma uprawnienia
+     * Checks if user has permissions
      */
     isUserAllowed(username) {
         return this.config.allowedUsers.includes(username);
     }
 }
 
-// Inicjalizacja managera autoryzacji
+// Initialize auth manager
 const authManager = new SwayfyAuthManager(config);
 
 /**
- * Middleware do sprawdzania autoryzacji
+ * Middleware for checking authorization
  */
 const requireAuth = async (req, res, next) => {
     try {
@@ -140,38 +140,38 @@ const requireAuth = async (req, res, next) => {
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
             return res.status(401).json({
                 success: false,
-                message: 'Brak tokena autoryzacji'
+                message: 'Missing authorization token'
             });
         }
 
-        const token = authHeader.substring(7); // Usuń "Bearer "
+        const token = authHeader.substring(7); // Remove "Bearer "
 
         if (!token || !accountId || !username) {
             return res.status(401).json({
                 success: false,
-                message: 'Niepełne dane autoryzacji'
+                message: 'Incomplete authorization data'
             });
         }
 
-        // Sprawdź uprawnienia użytkownika
+        // Check user permissions
         if (!authManager.isUserAllowed(username)) {
             return res.status(403).json({
                 success: false,
-                message: 'Brak uprawnień dostępu'
+                message: 'Access denied'
             });
         }
 
-        // Weryfikuj token
+        // Verify token
         const isValid = await authManager.verifyToken(token, accountId);
         
         if (!isValid) {
             return res.status(401).json({
                 success: false,
-                message: 'Nieprawidłowy lub wygasły token'
+                message: 'Invalid or expired token'
             });
         }
 
-        // Dodaj dane użytkownika do requesta
+        // Add user data to request
         req.user = {
             username: username,
             accountId: accountId,
@@ -180,10 +180,10 @@ const requireAuth = async (req, res, next) => {
 
         next();
     } catch (error) {
-        console.error('Błąd middleware autoryzacji:', error);
+        console.error('Auth middleware error:', error);
         res.status(500).json({
             success: false,
-            message: 'Błąd weryfikacji autoryzacji'
+            message: 'Authorization verification error'
         });
     }
 };
@@ -192,7 +192,7 @@ const requireAuth = async (req, res, next) => {
  * ROUTES
  */
 
-// Generowanie linku logowania
+// Generate login link
 app.post('/api/auth/generate-link', async (req, res) => {
     try {
         const authUrl = await authManager.generateAuthLink();
@@ -204,39 +204,39 @@ app.post('/api/auth/generate-link', async (req, res) => {
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: 'Błąd generowania linku autoryzacyjnego'
+            message: 'Error generating authorization link'
         });
     }
 });
 
-// Obsługa callback po autoryzacji
+// Handle callback after authorization
 app.post('/api/auth/callback', async (req, res) => {
     try {
         const { code, accountId, confirm } = req.body;
 
-        // Sprawdź token potwierdzenia
+        // Check confirmation token
         if (confirm !== config.swayfy.confirmationToken) {
             return res.status(400).json({
                 success: false,
-                message: 'Nieprawidłowy token potwierdzenia'
+                message: 'Invalid confirmation token'
             });
         }
 
         if (!code || !accountId) {
             return res.status(400).json({
                 success: false,
-                message: 'Brak wymaganych parametrów'
+                message: 'Missing required parameters'
             });
         }
 
-        // Wymień kod na token
+        // Exchange code for token
         const tokenData = await authManager.exchangeCodeForToken(code, accountId);
 
-        // Sprawdź uprawnienia użytkownika
+        // Check user permissions
         if (!authManager.isUserAllowed(tokenData.user.username)) {
             return res.status(403).json({
                 success: false,
-                message: 'Brak uprawnień dostępu do aplikacji'
+                message: 'No access permissions to application'
             });
         }
 
@@ -246,15 +246,15 @@ app.post('/api/auth/callback', async (req, res) => {
             user: tokenData.user
         });
     } catch (error) {
-        console.error('Błąd callback:', error);
+        console.error('Callback error:', error);
         res.status(500).json({
             success: false,
-            message: 'Błąd podczas autoryzacji'
+            message: 'Error during authorization'
         });
     }
 });
 
-// Weryfikacja tokena
+// Token verification
 app.post('/api/auth/verify', async (req, res) => {
     try {
         const { token, accountId, username } = req.body;
@@ -262,20 +262,20 @@ app.post('/api/auth/verify', async (req, res) => {
         if (!token || !accountId || !username) {
             return res.status(400).json({
                 success: false,
-                message: 'Brak wymaganych danych'
+                message: 'Missing required data'
             });
         }
 
-        // Sprawdź uprawnienia
+        // Check permissions
         if (!authManager.isUserAllowed(username)) {
             return res.status(403).json({
                 success: false,
                 authorized: false,
-                message: 'Brak uprawnień'
+                message: 'No permissions'
             });
         }
 
-        // Weryfikuj token
+        // Verify token
         const isValid = await authManager.verifyToken(token, accountId);
 
         res.json({
@@ -284,27 +284,27 @@ app.post('/api/auth/verify', async (req, res) => {
             authorized: isValid
         });
     } catch (error) {
-        console.error('Błąd weryfikacji:', error);
+        console.error('Verification error:', error);
         res.status(500).json({
             success: false,
-            message: 'Błąd weryfikacji tokena'
+            message: 'Token verification error'
         });
     }
 });
 
-// Przykład chronionego endpointu
+// Example protected endpoint
 app.get('/api/protected/profile', requireAuth, (req, res) => {
     res.json({
         success: true,
         user: req.user,
-        message: 'Dostęp do chronionego zasobu'
+        message: 'Access to protected resource'
     });
 });
 
-// Przykład chronionego endpointu z danymi
+// Example protected endpoint with data
 app.get('/api/protected/data', requireAuth, async (req, res) => {
     try {
-        // Tutaj możesz pobrać dane specyficzne dla użytkownika
+        // Here you can fetch user-specific data
         const userData = {
             username: req.user.username,
             accountId: req.user.accountId,
@@ -317,15 +317,15 @@ app.get('/api/protected/data', requireAuth, async (req, res) => {
             data: userData
         });
     } catch (error) {
-        console.error('Błąd pobierania danych:', error);
+        console.error('Data fetch error:', error);
         res.status(500).json({
             success: false,
-            message: 'Błąd pobierania danych użytkownika'
+            message: 'Error fetching user data'
         });
     }
 });
 
-// Endpoint do sprawdzania statusu serwera
+// Server status endpoint
 app.get('/api/health', (req, res) => {
     res.json({
         success: true,
@@ -338,13 +338,13 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// Obsługa błędów
+// Error handling
 app.use((error, req, res, next) => {
     console.error('Server error:', error);
     
     res.status(500).json({
         success: false,
-        message: 'Wewnętrzny błąd serwera'
+        message: 'Internal server error'
     });
 });
 
@@ -352,17 +352,17 @@ app.use((error, req, res, next) => {
 app.use((req, res) => {
     res.status(404).json({
         success: false,
-        message: 'Endpoint nie został znaleziony'
+        message: 'Endpoint not found'
     });
 });
 
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-    console.log(`🚀 Serwer uruchomiony na porcie ${PORT}`);
+    console.log(`🚀 Server running on port ${PORT}`);
     console.log(`🔗 Swayfy API: ${config.swayfy.apiUrl}`);
     console.log(`📍 Redirect URL: ${config.swayfy.redirectUrl}`);
-    console.log(`👥 Dozwoleni użytkownicy: ${config.allowedUsers.join(', ')}`);
+    console.log(`👥 Allowed users: ${config.allowedUsers.join(', ')}`);
 });
 
 module.exports = app;
