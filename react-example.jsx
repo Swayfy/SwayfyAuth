@@ -1,11 +1,11 @@
 /**
  * React Example
- * Implementacja autoryzacji Swayfy w React
+ * Swayfy authorization implementation in React
  */
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-// Konfiguracja
+// Configuration
 const SWAYFY_CONFIG = {
     apiUrl: 'https://swayfy.xyz',
     redirectUrl: window.location.origin + '/auth/callback',
@@ -13,23 +13,23 @@ const SWAYFY_CONFIG = {
 };
 
 /**
- * Context dla autoryzacji
+ * Authorization context
  */
 const AuthContext = createContext();
 
 /**
- * Hook do używania autoryzacji
+ * Hook for using authorization
  */
 export const useAuth = () => {
     const context = useContext(AuthContext);
     if (!context) {
-        throw new Error('useAuth musi być używany wewnątrz AuthProvider');
+        throw new Error('useAuth must be used within AuthProvider');
     }
     return context;
 };
 
 /**
- * Provider autoryzacji
+ * Authorization provider
  */
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
@@ -37,12 +37,12 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // Sprawdź autoryzację przy ładowaniu
+    // Check auth status on load
     useEffect(() => {
         checkAuthStatus();
     }, []);
 
-    // Obsługa callback URL
+    // Handle callback URL
     useEffect(() => {
         if (window.location.pathname === '/auth/callback') {
             handleCallback();
@@ -50,7 +50,7 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     /**
-     * Sprawdza status autoryzacji
+     * Checks authorization status
      */
     const checkAuthStatus = async () => {
         const storedToken = localStorage.getItem('swayfy_token');
@@ -70,7 +70,7 @@ export const AuthProvider = ({ children }) => {
                     logout();
                 }
             } catch (error) {
-                console.error('Błąd weryfikacji tokena:', error);
+                console.error('Token verification error:', error);
                 logout();
             }
         }
@@ -78,7 +78,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     /**
-     * Generuje link logowania i przekierowuje
+     * Generates login link and redirects
      */
     const login = async () => {
         try {
@@ -102,7 +102,7 @@ export const AuthProvider = ({ children }) => {
             if (data.success) {
                 window.location.href = data.url;
             } else {
-                throw new Error('Nie udało się wygenerować linku logowania');
+                throw new Error('Failed to generate login link');
             }
         } catch (error) {
             setError(error.message);
@@ -111,7 +111,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     /**
-     * Obsługuje callback po powrocie z Swayfy
+     * Handles callback after returning from Swayfy
      */
     const handleCallback = async () => {
         const urlParams = new URLSearchParams(window.location.search);
@@ -124,7 +124,7 @@ export const AuthProvider = ({ children }) => {
                 setLoading(true);
                 const tokenData = await exchangeToken(code, accountId);
 
-                // Zapisz dane
+                // Store data
                 localStorage.setItem('swayfy_token', tokenData.token);
                 localStorage.setItem('swayfy_account_id', tokenData.user.accountId);
                 localStorage.setItem('swayfy_username', tokenData.user.username);
@@ -132,7 +132,7 @@ export const AuthProvider = ({ children }) => {
                 setToken(tokenData.token);
                 setUser(tokenData.user);
 
-                // Wyczyść URL
+                // Clear URL
                 window.history.replaceState({}, document.title, '/dashboard');
             } catch (error) {
                 setError(error.message);
@@ -141,14 +141,14 @@ export const AuthProvider = ({ children }) => {
                 setLoading(false);
             }
         } else {
-            setError('Nieprawidłowe parametry autoryzacji');
+            setError('Invalid authorization parameters');
             window.history.replaceState({}, document.title, '/login');
             setLoading(false);
         }
     };
 
     /**
-     * Wymienia kod na token
+     * Exchanges code for token
      */
     const exchangeToken = async (code, accountId) => {
         const response = await fetch(`${SWAYFY_CONFIG.apiUrl}/api/exchangeToken`, {
@@ -167,12 +167,12 @@ export const AuthProvider = ({ children }) => {
         if (data.success) {
             return data;
         } else {
-            throw new Error(data.message || 'Wymiana tokena nie powiodła się');
+            throw new Error(data.message || 'Token exchange failed');
         }
     };
 
     /**
-     * Weryfikuje token
+     * Verifies token
      */
     const verifyToken = async (token, accountId) => {
         const response = await fetch(`${SWAYFY_CONFIG.apiUrl}/api/verifyToken`, {
@@ -191,7 +191,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     /**
-     * Wylogowuje użytkownika
+     * Logs out user
      */
     const logout = () => {
         localStorage.removeItem('swayfy_token');
@@ -203,11 +203,11 @@ export const AuthProvider = ({ children }) => {
     };
 
     /**
-     * Wykonuje autoryzowane żądanie
+     * Makes authenticated request
      */
     const authenticatedRequest = async (url, options = {}) => {
         if (!token || !user) {
-            throw new Error('Użytkownik nie jest zalogowany');
+            throw new Error('User is not authenticated');
         }
 
         const headers = {
@@ -225,7 +225,7 @@ export const AuthProvider = ({ children }) => {
 
         if (response.status === 401) {
             logout();
-            throw new Error('Sesja wygasła');
+            throw new Error('Session expired');
         }
 
         return response;
@@ -250,13 +250,13 @@ export const AuthProvider = ({ children }) => {
 };
 
 /**
- * Komponent ochrony tras
+ * Route protection component
  */
 export const ProtectedRoute = ({ children, fallback = null }) => {
     const { isAuthenticated, loading } = useAuth();
 
     if (loading) {
-        return <div>Ładowanie...</div>;
+        return <div>Loading...</div>;
     }
 
     if (!isAuthenticated) {
@@ -267,7 +267,7 @@ export const ProtectedRoute = ({ children, fallback = null }) => {
 };
 
 /**
- * Komponent strony logowania
+ * Login page component
  */
 const LoginPage = () => {
     const { login, loading, error } = useAuth();
@@ -275,8 +275,8 @@ const LoginPage = () => {
     return (
         <div className="login-page">
             <div className="login-container">
-                <h1>Logowanie</h1>
-                <p>Zaloguj się używając swojego konta Swayfy</p>
+                <h1>Login</h1>
+                <p>Log in using your Swayfy account</p>
                 
                 {error && (
                     <div className="error-message">
@@ -289,7 +289,7 @@ const LoginPage = () => {
                     disabled={loading}
                     className="login-button"
                 >
-                    {loading ? 'Ładowanie...' : 'Zaloguj się przez Swayfy'}
+                    {loading ? 'Loading...' : 'Login with Swayfy'}
                 </button>
             </div>
         </div>
@@ -297,7 +297,7 @@ const LoginPage = () => {
 };
 
 /**
- * Komponent dashboardu
+ * Dashboard component
  */
 const Dashboard = () => {
     const { user, logout, authenticatedRequest } = useAuth();
@@ -311,7 +311,7 @@ const Dashboard = () => {
             const result = await response.json();
             setData(result.data);
         } catch (error) {
-            console.error('Błąd pobierania danych:', error);
+            console.error('Error fetching data:', error);
         } finally {
             setLoading(false);
         }
@@ -326,31 +326,31 @@ const Dashboard = () => {
             <header className="dashboard-header">
                 <h1>Dashboard</h1>
                 <div className="user-info">
-                    <span>Witaj, {user.username}!</span>
-                    <button onClick={logout}>Wyloguj</button>
+                    <span>Welcome, {user.username}!</span>
+                    <button onClick={logout}>Logout</button>
                 </div>
             </header>
             
             <main className="dashboard-content">
                 {loading ? (
-                    <div>Ładowanie danych...</div>
+                    <div>Loading data...</div>
                 ) : data ? (
                     <div>
-                        <h2>Twoje dane:</h2>
+                        <h2>Your data:</h2>
                         <pre>{JSON.stringify(data, null, 2)}</pre>
                     </div>
                 ) : (
-                    <div>Brak danych</div>
+                    <div>No data</div>
                 )}
                 
-                <button onClick={fetchData}>Odśwież dane</button>
+                <button onClick={fetchData}>Refresh data</button>
             </main>
         </div>
     );
 };
 
 /**
- * Główny komponent aplikacji
+ * Main application component
  */
 const App = () => {
     return (
@@ -365,7 +365,7 @@ const App = () => {
 };
 
 /**
- * Hook do autoryzowanych żądań
+ * Hook for authenticated requests
  */
 export const useAuthenticatedRequest = () => {
     const { authenticatedRequest } = useAuth();
@@ -387,7 +387,7 @@ export const useAuthenticatedRequest = () => {
 };
 
 /**
- * Przykład użycia w komponencie
+ * Example usage in component
  */
 const ExampleComponent = () => {
     const { user, isAuthenticated } = useAuth();
@@ -400,7 +400,7 @@ const ExampleComponent = () => {
             const data = await response.json();
             setPosts(data);
         } catch (error) {
-            console.error('Błąd pobierania postów:', error);
+            console.error('Error fetching posts:', error);
         }
     };
 
@@ -410,19 +410,19 @@ const ExampleComponent = () => {
             const newPost = await response.json();
             setPosts([...posts, newPost]);
         } catch (error) {
-            console.error('Błąd tworzenia posta:', error);
+            console.error('Error creating post:', error);
         }
     };
 
     if (!isAuthenticated) {
-        return <div>Musisz być zalogowany</div>;
+        return <div>You must be logged in</div>;
     }
 
     return (
         <div>
-            <h2>Witaj {user.username}!</h2>
-            <button onClick={fetchPosts}>Pobierz posty</button>
-            {/* Reszta komponentu */}
+            <h2>Welcome {user.username}!</h2>
+            <button onClick={fetchPosts}>Fetch posts</button>
+            {/* Rest of component */}
         </div>
     );
 };
@@ -430,7 +430,7 @@ const ExampleComponent = () => {
 export default App;
 
 /**
- * CSS dla przykładu (opcjonalne)
+ * CSS for example (optional)
  */
 const styles = `
 .login-page {
