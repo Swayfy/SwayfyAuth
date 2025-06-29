@@ -56,7 +56,7 @@ Create a configuration file:
 module.exports = {
   swayfy: {
     apiUrl: 'https://swayfy.xyz',
-    redirectUrl: 'https://your-domain.com/auth/callback',
+    redirectUrl: 'https://example.com/auth/callback',
     confirmationToken: 'unique_app_identifier'
   },
   allowedUsers: [
@@ -167,7 +167,7 @@ See files in this folder:
 
 ```env
 SWAYFY_API_URL=https://swayfy.xyz
-SWAYFY_REDIRECT_URL=https://your-domain.com/auth/callback
+SWAYFY_REDIRECT_URL=https://example.com/auth/callback
 SWAYFY_CONFIRMATION_TOKEN=unique_app_identifier
 ```
 
@@ -262,7 +262,7 @@ Generates authorization link.
 ```json
 {
   "type": "login",
-  "redirectUrl": "https://your-domain.com/callback",
+  "redirectUrl": "https://example.com/callback",
   "confirmationToken": "unique_identifier"
 }
 ```
