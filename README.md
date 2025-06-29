@@ -271,7 +271,7 @@ Generates authorization link.
 ```json
 {
   "success": true,
-  "url": "https://swayfy.xyz/auth/login?..."
+  "url": "https:///auth.swayfy.xyz/login?..."
 }
 ```
 
