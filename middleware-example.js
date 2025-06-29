@@ -1,12 +1,12 @@
 /**
  * Middleware Example
- * Przykłady middleware do autoryzacji Swayfy
+ * Examples of middleware for Swayfy authorization
  */
 
-const fetch = require('node-fetch'); // lub axios
+const fetch = require('node-fetch'); // or axios
 
 /**
- * Podstawowy middleware autoryzacji
+ * Basic authorization middleware
  */
 const basicAuth = (config) => {
     return async (req, res, next) => {
@@ -18,11 +18,11 @@ const basicAuth = (config) => {
             if (!token || !accountId || !username) {
                 return res.status(401).json({
                     success: false,
-                    message: 'Brak danych autoryzacji'
+                    message: 'Missing authorization data'
                 });
             }
 
-            // Weryfikuj token w Swayfy
+            // Verify token with Swayfy
             const response = await fetch(`${config.swayfy.apiUrl}/api/verifyToken`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -34,7 +34,7 @@ const basicAuth = (config) => {
             if (!result.success || !result.valid) {
                 return res.status(401).json({
                     success: false,
-                    message: 'Nieprawidłowy token'
+                    message: 'Invalid token'
                 });
             }
 
@@ -44,18 +44,18 @@ const basicAuth = (config) => {
             console.error('Auth middleware error:', error);
             res.status(500).json({
                 success: false,
-                message: 'Błąd autoryzacji'
+                message: 'Authorization error'
             });
         }
     };
 };
 
 /**
- * Middleware z cache tokenów
+ * Middleware with token caching
  */
 const cachedAuth = (config) => {
     const tokenCache = new Map();
-    const CACHE_TTL = 5 * 60 * 1000; // 5 minut
+    const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
     return async (req, res, next) => {
         try {
@@ -66,20 +66,20 @@ const cachedAuth = (config) => {
             if (!token || !accountId || !username) {
                 return res.status(401).json({
                     success: false,
-                    message: 'Brak danych autoryzacji'
+                    message: 'Missing authorization data'
                 });
             }
 
             const cacheKey = `${token}:${accountId}`;
             const cached = tokenCache.get(cacheKey);
 
-            // Sprawdź cache
+            // Check cache
             if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
                 req.user = { username, accountId, token };
                 return next();
             }
 
-            // Weryfikuj token w Swayfy
+            // Verify token with Swayfy
             const response = await fetch(`${config.swayfy.apiUrl}/api/verifyToken`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -92,11 +92,11 @@ const cachedAuth = (config) => {
                 tokenCache.delete(cacheKey);
                 return res.status(401).json({
                     success: false,
-                    message: 'Nieprawidłowy token'
+                    message: 'Invalid token'
                 });
             }
 
-            // Zapisz w cache
+            // Store in cache
             tokenCache.set(cacheKey, {
                 valid: true,
                 timestamp: Date.now()
@@ -108,14 +108,14 @@ const cachedAuth = (config) => {
             console.error('Cached auth middleware error:', error);
             res.status(500).json({
                 success: false,
-                message: 'Błąd autoryzacji'
+                message: 'Authorization error'
             });
         }
     };
 };
 
 /**
- * Middleware z kontrolą uprawnień
+ * Middleware with role-based access control
  */
 const roleBasedAuth = (config, requiredRoles = []) => {
     return async (req, res, next) => {
@@ -127,19 +127,19 @@ const roleBasedAuth = (config, requiredRoles = []) => {
             if (!token || !accountId || !username) {
                 return res.status(401).json({
                     success: false,
-                    message: 'Brak danych autoryzacji'
+                    message: 'Missing authorization data'
                 });
             }
 
-            // Sprawdź czy użytkownik jest dozwolony
+            // Check if user is allowed
             if (!config.allowedUsers.includes(username)) {
                 return res.status(403).json({
                     success: false,
-                    message: 'Brak uprawnień'
+                    message: 'Access denied'
                 });
             }
 
-            // Sprawdź role (jeśli wymagane)
+            // Check roles (if required)
             if (requiredRoles.length > 0) {
                 const userRoles = config.userRoles[username] || [];
                 const hasRequiredRole = requiredRoles.some(role => userRoles.includes(role));
@@ -147,12 +147,12 @@ const roleBasedAuth = (config, requiredRoles = []) => {
                 if (!hasRequiredRole) {
                     return res.status(403).json({
                         success: false,
-                        message: 'Niewystarczające uprawnienia'
+                        message: 'Insufficient permissions'
                     });
                 }
             }
 
-            // Weryfikuj token
+            // Verify token
             const response = await fetch(`${config.swayfy.apiUrl}/api/verifyToken`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -164,7 +164,7 @@ const roleBasedAuth = (config, requiredRoles = []) => {
             if (!result.success || !result.valid) {
                 return res.status(401).json({
                     success: false,
-                    message: 'Nieprawidłowy token'
+                    message: 'Invalid token'
                 });
             }
 
@@ -179,14 +179,14 @@ const roleBasedAuth = (config, requiredRoles = []) => {
             console.error('Role-based auth middleware error:', error);
             res.status(500).json({
                 success: false,
-                message: 'Błąd autoryzacji'
+                message: 'Authorization error'
             });
         }
     };
 };
 
 /**
- * Middleware z rate limiting
+ * Middleware with rate limiting
  */
 const rateLimitedAuth = (config, maxRequests = 100, windowMs = 60000) => {
     const requestCounts = new Map();
@@ -200,7 +200,7 @@ const rateLimitedAuth = (config, maxRequests = 100, windowMs = 60000) => {
             if (!token || !accountId || !username) {
                 return res.status(401).json({
                     success: false,
-                    message: 'Brak danych autoryzacji'
+                    message: 'Missing authorization data'
                 });
             }
 
@@ -217,14 +217,14 @@ const rateLimitedAuth = (config, maxRequests = 100, windowMs = 60000) => {
             if (userRequests.count >= maxRequests) {
                 return res.status(429).json({
                     success: false,
-                    message: 'Zbyt wiele żądań'
+                    message: 'Too many requests'
                 });
             }
 
             userRequests.count++;
             requestCounts.set(userKey, userRequests);
 
-            // Weryfikuj token
+            // Verify token
             const response = await fetch(`${config.swayfy.apiUrl}/api/verifyToken`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -236,7 +236,7 @@ const rateLimitedAuth = (config, maxRequests = 100, windowMs = 60000) => {
             if (!result.success || !result.valid) {
                 return res.status(401).json({
                     success: false,
-                    message: 'Nieprawidłowy token'
+                    message: 'Invalid token'
                 });
             }
 
@@ -246,14 +246,14 @@ const rateLimitedAuth = (config, maxRequests = 100, windowMs = 60000) => {
             console.error('Rate limited auth middleware error:', error);
             res.status(500).json({
                 success: false,
-                message: 'Błąd autoryzacji'
+                message: 'Authorization error'
             });
         }
     };
 };
 
 /**
- * Middleware z logowaniem
+ * Middleware with logging
  */
 const loggedAuth = (config) => {
     return async (req, res, next) => {
@@ -268,14 +268,14 @@ const loggedAuth = (config) => {
             console.log(`[AUTH] ${new Date().toISOString()} - ${ip} - ${username} - ${req.method} ${req.path}`);
 
             if (!token || !accountId || !username) {
-                console.log(`[AUTH] Brak danych autoryzacji - ${ip}`);
+                console.log(`[AUTH] Missing authorization data - ${ip}`);
                 return res.status(401).json({
                     success: false,
-                    message: 'Brak danych autoryzacji'
+                    message: 'Missing authorization data'
                 });
             }
 
-            // Weryfikuj token
+            // Verify token
             const response = await fetch(`${config.swayfy.apiUrl}/api/verifyToken`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -285,31 +285,31 @@ const loggedAuth = (config) => {
             const result = await response.json();
 
             if (!result.success || !result.valid) {
-                console.log(`[AUTH] Nieprawidłowy token - ${username} - ${ip}`);
+                console.log(`[AUTH] Invalid token - ${username} - ${ip}`);
                 return res.status(401).json({
                     success: false,
-                    message: 'Nieprawidłowy token'
+                    message: 'Invalid token'
                 });
             }
 
             const duration = Date.now() - startTime;
-            console.log(`[AUTH] Sukces - ${username} - ${ip} - ${duration}ms`);
+            console.log(`[AUTH] Success - ${username} - ${ip} - ${duration}ms`);
 
             req.user = { username, accountId, token };
             next();
         } catch (error) {
             const duration = Date.now() - startTime;
-            console.error(`[AUTH] Błąd - ${duration}ms:`, error);
+            console.error(`[AUTH] Error - ${duration}ms:`, error);
             res.status(500).json({
                 success: false,
-                message: 'Błąd autoryzacji'
+                message: 'Authorization error'
             });
         }
     };
 };
 
 /**
- * Middleware opcjonalnej autoryzacji
+ * Optional authorization middleware
  */
 const optionalAuth = (config) => {
     return async (req, res, next) => {
@@ -318,13 +318,13 @@ const optionalAuth = (config) => {
             const accountId = req.headers['x-account-id'];
             const username = req.headers['x-username'];
 
-            // Jeśli brak danych autoryzacji, kontynuuj bez użytkownika
+            // If no auth data, continue without user
             if (!token || !accountId || !username) {
                 req.user = null;
                 return next();
             }
 
-            // Weryfikuj token
+            // Verify token
             const response = await fetch(`${config.swayfy.apiUrl}/api/verifyToken`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -358,7 +358,7 @@ module.exports = {
 };
 
 /**
- * Przykład użycia:
+ * Usage example:
  * 
  * const { basicAuth, roleBasedAuth } = require('./middleware-example');
  * 
@@ -371,9 +371,9 @@ module.exports = {
  *   }
  * };
  * 
- * // Podstawowa autoryzacja
+ * // Basic authorization
  * app.use('/api/protected', basicAuth(config));
  * 
- * // Autoryzacja z rolami
+ * // Role-based authorization
  * app.use('/api/admin', roleBasedAuth(config, ['write', 'delete']));
  */
